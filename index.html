@@ -430,6 +430,18 @@ button{background:#111;color:#fff;border:none;cursor:pointer}
 <div id="stores" class="hidden">
 
   <h2>Total Registered Stores</h2>
+<input
+  id="storeSearchInput"
+  placeholder="🔍 Search by store name / phone / email"
+  style="
+    width:320px;
+    padding:10px 14px;
+    margin-bottom:15px;
+    border-radius:8px;
+    border:1px solid #ddd;
+    font-size:14px
+  "
+>
 
   <div class="card" style="display:grid;
     grid-template-columns:1.5fr 1fr 2fr 2fr 1fr 1fr;
@@ -640,7 +652,7 @@ console.log("Using project:", app.options.projectId);
 const searchInput = document.getElementById("searchInput");
 const result = document.getElementById("result");
 let currentUserDoc = null;
-
+let allStores = [];
 /* 🔹 ELEMENTS (PEHLE DECLARE) */
 const adminEmail = document.getElementById("adminEmail");
 const loginBox = document.getElementById("loginBox");
@@ -1059,14 +1071,14 @@ window.loadStores = function(){
 
   onSnapshot(q, snap=>{
 
-    let arr = [];
+    allStores = [];
 
     snap.forEach(d=>{
       const data = d.data();
 
-      // ✅ sirf wo users jin ka storeName hai = seller
+      // ✅ sirf sellers
       if(data.storeName){
-        arr.push({
+        allStores.push({   // ✅ arr ❌ → allStores ✅
           id: d.id,
           ...data
         });
@@ -1074,15 +1086,17 @@ window.loadStores = function(){
     });
 
     // latest first
-    arr.sort((a,b)=>{
+    allStores.sort((a,b)=>{
       if(!a.createdAt || !b.createdAt) return 0;
       return b.createdAt.seconds - a.createdAt.seconds;
     });
 
-    renderStores(arr);
+    // 🔥 MUST
+    renderStores(allStores);
 
   });
 };
+
 
 window.approveStore = async function(id){
   await updateDoc(doc(db,"users",id),{
@@ -1396,6 +1410,7 @@ function listenAdminChat(){
 
     snap.forEach(d => {
       const m = d.data();
+      const msgId = d.id;
 
       const time = m.createdAt
         ? m.createdAt.toDate().toLocaleString()
@@ -1415,7 +1430,9 @@ adminChatBox.innerHTML += `
       border-radius:14px;
       background:${m.sender==="admin"?"#007bff":"#f1f1f1"};
       color:${m.sender==="admin"?"#fff":"#000"};
-      font-size:13px;">
+      font-size:13px;
+      position:relative;
+    ">
 
       ${m.text ? `<div>${m.text}</div>` : ""}
 
@@ -1424,6 +1441,18 @@ adminChatBox.innerHTML += `
         ? `<img src="${m.image}"
            style="max-width:160px;border-radius:8px;margin-top:6px;cursor:pointer"
            onclick="window.open('${m.image}','_blank')">`
+        : ""
+      }
+
+      ${
+        m.sender === "admin"
+        ? `<div style="text-align:right;margin-top:4px">
+            <span
+              onclick="deleteSupportMessage('${supportTicketId}','${msgId}')"
+              style="font-size:11px;color:#ffdddd;cursor:pointer">
+              ❌ Delete
+            </span>
+          </div>`
         : ""
       }
 
@@ -1812,6 +1841,39 @@ function listenSupportNotifications(){
   });
 
 }
+import { deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+window.deleteSupportMessage = async function(ticketId, msgId){
+  if(!confirm("Delete this message?")) return;
+
+  await deleteDoc(
+    doc(db,"supportTickets",ticketId,"messages",msgId)
+  );
+};
+document.addEventListener("input", function(e){
+
+  if(e.target.id !== "storeSearchInput") return;
+
+  const v = e.target.value.toLowerCase().trim();
+
+  // ✅ agar search box khaali hai → sab stores dikhao
+  if(v === ""){
+    renderStores(allStores);
+    return;
+  }
+
+  // 🔍 warna filter karo
+  const filtered = allStores.filter(s => {
+    return (
+      (s.storeName || "").toLowerCase().includes(v) ||
+      (s.phone || "").toLowerCase().includes(v) ||
+      (s.email || "").toLowerCase().includes(v)
+    );
+  });
+
+  renderStores(filtered);
+});
+
 
 </script>
 <div id="adminOrderModal" class="modal hidden">
