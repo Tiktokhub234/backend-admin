@@ -1616,6 +1616,14 @@ window.openAdminOrderDetail = async function(id){
   if(userSnap.exists()){
     ad_phone.innerText = userSnap.data().phone || "-";
   }
+// 🔴 Cancel button condition
+const cancelBtn = document.getElementById("cancelOrderBtn");
+
+if (o.status === "pending" && !o.pickup) {
+  cancelBtn.style.display = "block";
+} else {
+  cancelBtn.style.display = "none";
+}
 
   document.getElementById("adminOrderModal").classList.remove("hidden");
 };
@@ -1874,6 +1882,20 @@ document.addEventListener("input", function(e){
   renderStores(filtered);
 });
 
+window.cancelOrder = async function(){
+
+  if(!currentOrderId) return;
+
+  const ok = confirm(
+    "⚠️ Are you sure?\n\nThis order will be permanently deleted."
+  );
+  if(!ok) return;
+
+  await deleteDoc(doc(db, "orders", currentOrderId));
+
+  alert("Order cancelled & deleted ✅");
+  closeAdminOrder();
+};
 
 </script>
 <div id="adminOrderModal" class="modal hidden">
@@ -1901,10 +1923,20 @@ document.addEventListener("input", function(e){
 
     </div>
 
-    <div class="modal-footer">
-      <button class="btn-primary" onclick="saveOrderStatus()">Save</button>
-      <button class="btn-light" onclick="closeAdminOrder()">Close</button>
-    </div>
+<div class="modal-footer">
+  <button class="btn-primary" onclick="saveOrderStatus()">Save</button>
+
+  <!-- 🔴 CANCEL ORDER BUTTON -->
+  <button
+    id="cancelOrderBtn"
+    style="background:#e74c3c;color:#fff;display:none"
+    onclick="cancelOrder()">
+    Cancel Order
+  </button>
+
+  <button class="btn-light" onclick="closeAdminOrder()">Close</button>
+</div>
+
 
   </div>
 </div>
